@@ -4,6 +4,6 @@
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": { "^.+\\.(t|j)s$": "ts-jest" },
-  "transformIgnorePatterns": ["node_modules/(?!(@nestjs/passport|@nestjs/jwt)/)"],
+  "transformIgnorePatterns": ["node_modules/(?!(@nestjs/passport|@nestjs/jwt|nodemailer)/)"],
   "maxWorkers": 1
 }
