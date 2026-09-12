@@ -34,6 +34,11 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping" --health-interval 5s
           --health-timeout 5s --health-retries 10
+      # Espelha o docker-compose: sem ele o registro tenta falar com o
+      # localhost:1025 vazio e os e2e que não mockam o envio quebram.
+      mailhog:
+        image: mailhog/mailhog
+        ports: ['1025:1025']
 
     env:
       NODE_ENV: test
