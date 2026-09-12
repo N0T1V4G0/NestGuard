@@ -22,6 +22,7 @@ describe('EnvSchema', () => {
   });
 
   it('rejeita quando falta uma variável obrigatória', () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- omitir a chave é o objetivo
     const { DATABASE_URL, ...incomplete } = validEnv;
     expect(() => EnvSchema.parse(incomplete)).toThrow();
   });

@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [master, staging]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # As duas pontas do range declarado em engines: 20.19 é o piso do
+        # NestJS 11, 24 é o LTS de desenvolvimento. É o que torna honesta a
+        # linha de compatibilidade na documentação.
+        node: ['20.19', '24']
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: boilerplate_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+
+    env:
+      NODE_ENV: test
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/boilerplate_test
+      REDIS_URL: redis://localhost:6379
+      JWT_ACCESS_SECRET: ci-secret-com-no-minimo-32-caracteres-aqui
+      JWT_ACCESS_TTL: 15m
+      REFRESH_TOKEN_TTL_DAYS: 30
+      MAIL_FROM: noreply@example.com
+      MAIL_HOST: localhost
+      MAIL_PORT: 1025
+      APP_URL: http://localhost:3000
+      THROTTLE_TTL_MS: 60000
+      THROTTLE_LIMIT_DEFAULT: 100
+      THROTTLE_LIMIT_SENSITIVE: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx prisma migrate deploy
+      - run: npx prisma generate
+
+      - run: npm run lint
+      - run: npm run build
+
+      - run: npm test
+      - run: npm run test:e2e
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # A imagem de produção é entregue ao comprador: se ela quebrar, ele
+      # descobre na instalação.
+      - run: docker build -t nestguard:ci .
