@@ -1,4 +1,10 @@
-import { ConflictException, Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  OnModuleInit,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { randomBytes } from 'node:crypto';
@@ -14,6 +20,8 @@ import { VerificationService } from './verification.service';
 
 @Injectable()
 export class AuthService implements OnModuleInit {
+  private readonly logger = new Logger(AuthService.name);
+
   /**
    * Hash descartável usado quando o e-mail não existe.
    *
@@ -60,15 +68,31 @@ export class AuthService implements OnModuleInit {
     return { id: user.id, email: user.email };
   }
 
+  /**
+   * Emite o token de verificação e tenta enviar o e-mail.
+   *
+   * Uma falha no SMTP não derruba o registro: o usuário já foi gravado, e
+   * devolver 500 faria o cliente acreditar que a conta não existe — quando na
+   * verdade existe, e uma nova tentativa esbarraria no 409 de e-mail duplicado.
+   * O token fica válido no banco, então o reenvio resolve. O erro vai para o
+   * log, que é onde o operador precisa vê-lo.
+   */
   private async sendVerificationEmail(userId: string, email: string): Promise<void> {
     const token = await this.verification.issue(userId, 'EMAIL_VERIFICATION');
     const appUrl = this.config.get('APP_URL', { infer: true });
 
-    await this.mail.send(
-      email,
-      'Confirme seu e-mail',
-      `Acesse ${appUrl}/verify-email?token=${token} para confirmar seu e-mail.`,
-    );
+    try {
+      await this.mail.send(
+        email,
+        'Confirme seu e-mail',
+        `Acesse ${appUrl}/verify-email?token=${token} para confirmar seu e-mail.`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Falha ao enviar e-mail de verificação para o usuário ${userId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 
   async verifyEmail(token: string): Promise<void> {
