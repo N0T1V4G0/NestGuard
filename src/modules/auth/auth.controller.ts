@@ -18,6 +18,9 @@ import type { Env } from '../../core/config/env.schema';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { RequestResetDto } from './dto/request-reset.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 
 const REFRESH_COOKIE = 'refresh_token';
 
@@ -102,6 +105,27 @@ export class AuthController {
     }
 
     res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH });
+  }
+
+  @Public()
+  @Post('verify-email')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  verifyEmail(@Body() dto: VerifyEmailDto): Promise<void> {
+    return this.auth.verifyEmail(dto.token);
+  }
+
+  @Public()
+  @Post('request-password-reset')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  requestPasswordReset(@Body() dto: RequestResetDto): Promise<void> {
+    return this.auth.requestPasswordReset(dto.email);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
+    return this.auth.resetPassword(dto.token, dto.password);
   }
 
   @Get('me')
