@@ -249,6 +249,30 @@ documentação.
 Nota de manutenção: a partir de outubro de 2026 o Node passa a uma major por
 ano, com número alinhado ao ano-calendário e toda release virando LTS.
 
+### Versão do Prisma e o audit da CLI
+
+Prisma fixado em **7.10.0** (CLI e client). No momento da escolha, o `latest`
+da CLI no npm era `8.0.0-rc.14` — um release candidate, que o `npm install`
+pega por padrão. RC não entra em produto vendido: a API ainda muda, e o
+comprador ficaria numa versão sem suporte estável.
+
+`npm audit` reporta 4 vulnerabilidades altas vindas de dependências
+transitivas da **CLI** (`deepmerge-ts` via `@prisma/config`, e `mysql2`).
+Verificado: o `@prisma/client`, única peça que vai para produção, não depende
+de nenhuma delas — e o `mysql2` sequer é carregado, já que o projeto usa
+Postgres. Não existe versão do Prisma 7 sem esse ruído; as saídas seriam
+voltar ao 6.19.3 (uma major atrás, em produto novo) ou ir ao 8 RC.
+
+Decisão: manter 7.10.0 e **documentar**, em vez de silenciar com `overrides`.
+Forçar versões que o Prisma não testou trocaria um problema visível por um
+invisível.
+
+**Pendência de documentação:** a página de instalação precisa de uma nota
+explicando que o audit aparece na primeira instalação, que é restrito ao
+ferramental de desenvolvimento, e que sai quando o Prisma atualizar. O
+comprador vai rodar `npm ci` e ver isso — melhor encontrar a explicação do que
+abrir issue.
+
 ### Demais
 
 Docker Compose para dev (app, Postgres, Redis, Mailhog). Dockerfile
