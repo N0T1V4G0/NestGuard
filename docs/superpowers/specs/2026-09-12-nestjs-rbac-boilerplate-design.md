@@ -313,6 +313,24 @@ roadmap e justificam a v2 paga.
 
 ## Documentação
 
+São duas coisas distintas, e ambas fazem parte do produto.
+
+### Swagger / OpenAPI — documentação da API
+
+`@nestjs/swagger` com Swagger UI, DTOs e controllers decorados, bearer auth
+configurado e exemplos reais de request e response. É o que o comprador vê ao
+subir o projeto pela primeira vez, e economiza justamente o trabalho chato que
+ele está pagando para não fazer. Também rende screenshot de landing page: a
+lista de endpoints de auth e RBAC comunica valor mais rápido que texto.
+
+**Quando:** última task do plano 2 (RBAC), decidido em 2026-09-12. Não antes,
+porque os decorators do Swagger convivem nos mesmos arquivos que os decorators
+de RBAC — fazer agora significaria mexer duas vezes nos mesmos DTOs e
+controllers. Não depois, porque o gerador de módulo (plano 3) precisa emitir
+código já decorado.
+
+### Site — documentação de uso do boilerplate
+
 Site em Docusaurus, escrito junto com o código, não no final. Guia de
 instalação, uma página por decisão arquitetural, o tutorial "adicionando seu
 primeiro módulo" usando o gerador, e a matriz de casos de RBAC como tabela.

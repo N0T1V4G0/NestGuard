@@ -10,6 +10,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SkipThrottle } from '@nestjs/throttler';
 import { User } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { CurrentUser } from '../../core/auth/current-user.decorator';
@@ -60,6 +61,7 @@ export class AuthController {
   }
 
   @Public()
+  @SkipThrottle({ default: true })
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   register(@Body() dto: RegisterDto): Promise<{ id: string; email: string }> {
@@ -67,6 +69,7 @@ export class AuthController {
   }
 
   @Public()
+  @SkipThrottle({ default: true })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
@@ -81,6 +84,7 @@ export class AuthController {
   }
 
   @Public()
+  @SkipThrottle({ sensitive: true })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(
@@ -94,6 +98,7 @@ export class AuthController {
   }
 
   @Public()
+  @SkipThrottle({ sensitive: true })
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
@@ -108,6 +113,7 @@ export class AuthController {
   }
 
   @Public()
+  @SkipThrottle({ sensitive: true })
   @Post('verify-email')
   @HttpCode(HttpStatus.NO_CONTENT)
   verifyEmail(@Body() dto: VerifyEmailDto): Promise<void> {
@@ -115,6 +121,7 @@ export class AuthController {
   }
 
   @Public()
+  @SkipThrottle({ default: true })
   @Post('request-password-reset')
   @HttpCode(HttpStatus.NO_CONTENT)
   requestPasswordReset(@Body() dto: RequestResetDto): Promise<void> {
@@ -122,12 +129,14 @@ export class AuthController {
   }
 
   @Public()
+  @SkipThrottle({ default: true })
   @Post('reset-password')
   @HttpCode(HttpStatus.NO_CONTENT)
   resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
     return this.auth.resetPassword(dto.token, dto.password);
   }
 
+  @SkipThrottle({ sensitive: true })
   @Get('me')
   me(@CurrentUser() user: User): { id: string; email: string; name: string | null } {
     // Campos escolhidos explicitamente: devolver o registro do Prisma
