@@ -7,6 +7,7 @@ import { PasswordService } from '../../core/crypto/password.service';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { RefreshTokenService } from './refresh-token.service';
 
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -25,6 +26,7 @@ export class AuthService implements OnModuleInit {
     private readonly passwords: PasswordService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService<Env, true>,
+    private readonly refreshTokens: RefreshTokenService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -50,7 +52,7 @@ export class AuthService implements OnModuleInit {
     return { id: user.id, email: user.email };
   }
 
-  async login(dto: LoginDto): Promise<{ accessToken: string }> {
+  async login(dto: LoginDto): Promise<{ accessToken: string; refreshToken: string }> {
     const user = await this.users.findByEmail(dto.email);
 
     // Mensagem idêntica nos dois casos: não revela quais e-mails existem.
@@ -66,7 +68,26 @@ export class AuthService implements OnModuleInit {
       throw invalid;
     }
 
-    return { accessToken: await this.signAccessToken(user) };
+    return {
+      accessToken: await this.signAccessToken(user),
+      refreshToken: await this.refreshTokens.issue(user.id),
+    };
+  }
+
+  async refresh(rawToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+    const { userId, token } = await this.refreshTokens.rotate(rawToken);
+    const user = await this.users.findById(userId);
+
+    // O usuário pode ter sido removido depois da emissão do refresh token.
+    if (!user) {
+      throw new UnauthorizedException('Refresh token inválido');
+    }
+
+    return { accessToken: await this.signAccessToken(user), refreshToken: token };
+  }
+
+  logout(rawToken: string): Promise<void> {
+    return this.refreshTokens.revokeByToken(rawToken);
   }
 
   private signAccessToken(user: { id: string; email: string }): Promise<string> {
