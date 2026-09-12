@@ -12,8 +12,9 @@ describe('Verificação de e-mail e reset de senha', () => {
   beforeAll(async () => {
     app = await createTestApp();
     const mail = app.get(MailService);
-    jest.spyOn(mail, 'send').mockImplementation(async (to, subject, body) => {
+    jest.spyOn(mail, 'send').mockImplementation((to, subject, body) => {
       sent.push({ to, subject, body });
+      return Promise.resolve();
     });
   });
 

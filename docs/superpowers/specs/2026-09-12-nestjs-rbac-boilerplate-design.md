@@ -273,6 +273,21 @@ ferramental de desenvolvimento, e que sai quando o Prisma atualizar. O
 comprador vai rodar `npm ci` e ver isso — melhor encontrar a explicação do que
 abrir issue.
 
+### Tamanho da imagem de produção
+
+A imagem final ficou em **621MB**, acima dos 200-400MB típicos de uma imagem
+Node. A causa é o Prisma 7: o `@prisma/client` declara a CLI e o TypeScript
+como *peer dependencies*, então o npm as instala e o `npm prune --omit=dev`
+não as remove — arrastando `studio-core`, engines de desenvolvimento e o
+compilador. O Dockerfile remove esses diretórios explicitamente no estágio de
+build (de 1.1GB para 621MB, com `node_modules` caindo de 423MB para 299MB).
+
+O que resta é o próprio `@prisma/client` com seus engines, inerente à versão.
+
+**Pendência de roadmap:** investigar `prisma generate --no-engine` com Prisma
+Accelerate, ou empacotamento com bundler que faça tree-shaking do client. Não
+bloqueia a v1, mas build e deploy lentos são atrito real para o comprador.
+
 ### Demais
 
 Docker Compose para dev (app, Postgres, Redis, Mailhog). Dockerfile
