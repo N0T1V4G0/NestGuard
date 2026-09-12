@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// A partir do Prisma 7 a URL de conexão não vive mais aqui: as migrations
+// leem de `prisma.config.ts` e o client recebe um adapter (ver PrismaService).
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  name            String?
+  emailVerifiedAt DateTime?
+  // Costura de multi-tenancy: sempre null na v1. Existe desde já para que a
+  // v2 não precise refatorar todo o data access.
+  tenantId        String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  refreshTokens      RefreshToken[]
+  verificationTokens VerificationToken[]
+
+  @@index([tenantId])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  // SHA-256 do token, nunca o valor bruto: se o banco vazar, os tokens
+  // armazenados não são utilizáveis.
+  tokenHash String    @unique
+  // Agrupa os tokens derivados de um mesmo login. Ao detectar reuso,
+  // a família inteira é revogada de uma vez.
+  familyId  String
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+enum VerificationTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model VerificationToken {
+  id        String                @id @default(cuid())
+  tokenHash String                @unique
+  type      VerificationTokenType
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime              @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
