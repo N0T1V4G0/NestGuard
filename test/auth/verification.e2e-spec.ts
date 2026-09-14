@@ -64,9 +64,10 @@ describe('Verificação de e-mail e reset de senha', () => {
   it('nunca grava o token de verificação em texto puro', async () => {
     const token = tokenFromLastMail();
     const prisma = app.get(PrismaService);
-    const stored = await prisma.verificationToken.findFirst();
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: credentials.email } });
+    const stored = await prisma.verificationToken.findFirstOrThrow({ where: { userId: user.id } });
 
-    expect(stored!.tokenHash).not.toBe(token);
+    expect(stored.tokenHash).not.toBe(token);
   });
 
   it('responde 204 ao pedir reset, mesmo para e-mail inexistente', async () => {

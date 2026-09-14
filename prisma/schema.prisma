@@ -22,6 +22,8 @@ model User {
 
   refreshTokens      RefreshToken[]
   verificationTokens VerificationToken[]
+  roles              UserRole[]
+  posts              Post[]
 
   @@index([tenantId])
 }
@@ -62,4 +64,86 @@ model VerificationToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, type])
+}
+
+model Role {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  // Papéis de sistema vêm do seed e não podem ser removidos pela API:
+  // apagar 'admin' por engano deixaria a aplicação sem administrador.
+  isSystem    Boolean @default(false)
+
+  // Herança simples: um papel herda de no máximo um outro. Herança múltipla
+  // vira grafo com detecção de ciclo — complexidade real para um caso raro.
+  inheritsId String?
+  inherits   Role?   @relation("RoleHierarchy", fields: [inheritsId], references: [id])
+  children   Role[]  @relation("RoleHierarchy")
+
+  // Costura de multi-tenancy: sempre null na v1.
+  tenantId String?
+
+  grants RoleGrant[]
+  users  UserRole[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model RoleGrant {
+  id     String @id @default(cuid())
+  roleId String
+  // Texto livre no banco porque o Prisma não referencia tipos TypeScript.
+  // A proteção é a validação no boot, que recusa subir se houver uma
+  // permissão fora do catálogo.
+  permission String
+  // Condição declarativa: { "ownerId": "$user.id" } ou { "status": "DRAFT" }.
+  // JSON e não função — é o que permite traduzir para `where` do Prisma e
+  // rodar a autorização dentro da query, em vez de depois dela.
+  condition Json?
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permission])
+  @@index([permission])
+}
+
+model UserRole {
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+/// Módulo de exemplo: existe para exercitar ownership e condições, e serve de
+/// material para o tutorial "adicionando seu primeiro módulo".
+model Post {
+  id      String     @id @default(cuid())
+  title   String
+  body    String
+  status  PostStatus @default(DRAFT)
+  ownerId String
+  owner   User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  tenantId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([tenantId])
 }

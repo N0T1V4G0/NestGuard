@@ -112,7 +112,11 @@ describe('POST /auth/refresh', () => {
   it('rejeita um token expirado com 401', async () => {
     const res = await login();
     const prisma = app.get(PrismaService);
-    await prisma.refreshToken.updateMany({ data: { expiresAt: new Date(Date.now() - 1000) } });
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: credentials.email } });
+    await prisma.refreshToken.updateMany({
+      where: { userId: user.id },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
 
     await request(app.getHttpServer())
       .post('/auth/refresh')
@@ -124,24 +128,29 @@ describe('POST /auth/refresh', () => {
     const res = await login();
     const raw = cookieFrom(res).split('=')[1];
     const prisma = app.get(PrismaService);
-    const stored = await prisma.refreshToken.findFirst();
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: credentials.email } });
+    const stored = await prisma.refreshToken.findFirstOrThrow({ where: { userId: user.id } });
 
-    expect(stored!.tokenHash).not.toBe(raw);
+    expect(stored.tokenHash).not.toBe(raw);
   });
 
   it('mantém a mesma família ao rotacionar', async () => {
     const res = await login();
     const prisma = app.get(PrismaService);
-    const before = await prisma.refreshToken.findFirst();
+    // Filtrar pelo usuário do teste: o banco pode ter tokens de outros
+    // usuários (o admin do seed, por exemplo), e contá-los daria falso
+    // negativo.
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: credentials.email } });
+    const before = await prisma.refreshToken.findFirstOrThrow({ where: { userId: user.id } });
 
     await request(app.getHttpServer())
       .post('/auth/refresh')
       .set('Cookie', cookieFrom(res))
       .expect(200);
 
-    const all = await prisma.refreshToken.findMany();
+    const all = await prisma.refreshToken.findMany({ where: { userId: user.id } });
     expect(all).toHaveLength(2);
-    expect(all.every((t) => t.familyId === before!.familyId)).toBe(true);
+    expect(all.every((t) => t.familyId === before.familyId)).toBe(true);
   });
 
   it('logout revoga a família e limpa o cookie', async () => {
