@@ -28,7 +28,69 @@ async function main(): Promise<void> {
     },
   });
 
+  // Papéis de sistema. `isSystem` impede que sejam removidos pela API —
+  // apagar 'admin' por engano deixaria a aplicação sem administrador.
+  //
+  // A hierarquia é viewer <- editor <- admin: cada um herda o anterior e
+  // acrescenta. É também a demonstração de herança que a documentação usa.
+  const viewer = await prisma.role.upsert({
+    where: { name: 'viewer' },
+    update: {},
+    create: {
+      name: 'viewer',
+      description: 'Lê conteúdo publicado',
+      isSystem: true,
+      grants: { create: [{ permission: 'post:read', condition: { status: 'PUBLISHED' } }] },
+    },
+  });
+
+  const editor = await prisma.role.upsert({
+    where: { name: 'editor' },
+    update: {},
+    create: {
+      name: 'editor',
+      description: 'Cria e edita os próprios posts',
+      isSystem: true,
+      inheritsId: viewer.id,
+      grants: {
+        create: [
+          { permission: 'post:create' },
+          { permission: 'post:read', condition: { ownerId: '$user.id' } },
+          { permission: 'post:update', condition: { ownerId: '$user.id' } },
+          { permission: 'post:delete', condition: { ownerId: '$user.id' } },
+        ],
+      },
+    },
+  });
+
+  const adminRole = await prisma.role.upsert({
+    where: { name: 'admin' },
+    update: {},
+    create: {
+      name: 'admin',
+      description: 'Acesso total',
+      isSystem: true,
+      inheritsId: editor.id,
+      grants: {
+        create: [
+          { permission: 'post:read' },
+          { permission: 'post:update' },
+          { permission: 'post:delete' },
+          { permission: 'post:publish' },
+        ],
+      },
+    },
+  });
+
+  const admin = await prisma.user.findUniqueOrThrow({ where: { email } });
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: admin.id, roleId: adminRole.id } },
+    update: {},
+    create: { userId: admin.id, roleId: adminRole.id },
+  });
+
   console.log(`Seed concluído. Usuário admin: ${email}`);
+  console.log('Papéis de sistema: viewer, editor, admin');
 }
 
 main()
