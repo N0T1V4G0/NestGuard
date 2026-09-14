@@ -10,6 +10,12 @@ import 'dotenv/config';
  * Sobrescreve o que veio do .env de propósito — o .env carrega valores de
  * produção, que não servem para a suíte.
  */
+/**
+ * Silencia o log HTTP nos testes: cada requisição imprime uma linha JSON
+ * longa, que enterra a saída do Jest e dificulta diagnosticar falha.
+ */
+process.env.LOG_LEVEL = 'silent';
+
 process.env.THROTTLE_LIMIT_DEFAULT = '10000';
 process.env.THROTTLE_LIMIT_SENSITIVE = '10000';
 process.env.THROTTLE_TTL_MS = '60000';
