@@ -34,10 +34,18 @@ export async function createTestApp(env: Record<string, string> = {}): Promise<I
   return app;
 }
 
+/** Usuários criados pelo seed, que os testes não devem apagar. */
+const SEEDED_EMAILS = [process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com'];
+
 export async function resetDatabase(app: INestApplication): Promise<void> {
   const prisma = app.get(PrismaService);
+  const preserve = { email: { notIn: SEEDED_EMAILS } };
+
   // Ordem importa: os tokens referenciam usuários por FK.
-  await prisma.refreshToken.deleteMany();
-  await prisma.verificationToken.deleteMany();
-  await prisma.user.deleteMany();
+  await prisma.refreshToken.deleteMany({ where: { user: preserve } });
+  await prisma.verificationToken.deleteMany({ where: { user: preserve } });
+  // Preservar o admin do seed: apagá-lo levaria junto, por cascade, o
+  // vínculo UserRole que o seed cria — e a suíte seguinte rodaria contra um
+  // banco sem administrador.
+  await prisma.user.deleteMany({ where: preserve });
 }

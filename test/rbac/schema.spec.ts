@@ -10,9 +10,11 @@ describe('Schema do RBAC', () => {
   });
 
   afterEach(async () => {
-    await prisma.userRole.deleteMany();
+    // Filtrar por prefixo é obrigatório: um deleteMany() sem where apagaria
+    // os vínculos criados pelo seed, deixando o admin sem papel.
+    await prisma.userRole.deleteMany({ where: { role: { name: { startsWith: 'schema-test' } } } });
     await prisma.roleGrant.deleteMany({ where: { role: { name: { startsWith: 'schema-test' } } } });
-    await prisma.post.deleteMany();
+    await prisma.post.deleteMany({ where: { owner: { email: { contains: 'schema-test' } } } });
     await prisma.role.deleteMany({ where: { name: { startsWith: 'schema-test' } } });
     await prisma.user.deleteMany({ where: { email: { contains: 'schema-test' } } });
   });
