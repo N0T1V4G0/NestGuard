@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { conditionToPrisma } from './condition.to-prisma';
 import type { Condition, ResolvedPermissions } from './permission.types';
 import { isPermission, type Permission } from './permissions';
 
@@ -65,6 +66,43 @@ export class PermissionsService {
 
   async has(userId: string, permission: Permission): Promise<boolean> {
     return (await this.resolve(userId)).has(permission);
+  }
+
+  /**
+   * Devolve o fragmento `where` que restringe uma listagem ao que o usuário
+   * pode ver.
+   *
+   * - sem a permissão            → `null` (o chamador não deve retornar nada)
+   * - permissão irrestrita       → `{}`
+   * - uma condição               → o filtro daquela condição
+   * - várias condições           → `{ OR: [...] }`, porque papéis somam acesso
+   *
+   * O `null` é deliberadamente diferente de `{}`: confundir os dois faria uma
+   * listagem sem permissão devolver a tabela inteira.
+   */
+  async scopeFor(
+    userId: string,
+    permission: Permission,
+  ): Promise<Record<string, unknown> | null> {
+    const conditions = (await this.resolve(userId)).get(permission);
+
+    if (!conditions) {
+      return null;
+    }
+
+    if (conditions.includes(null)) {
+      return {};
+    }
+
+    const filters = conditions
+      .filter((c): c is Condition => c !== null)
+      .map((c) => conditionToPrisma(c, userId));
+
+    if (filters.length === 1) {
+      return filters[0];
+    }
+
+    return { OR: filters };
   }
 
   /**
