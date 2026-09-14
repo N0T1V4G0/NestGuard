@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, Post as HttpPost } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post as HttpPost } from '@nestjs/common';
 import { Post, User } from '@prisma/client';
 import { CurrentUser } from '../../core/auth/current-user.decorator';
+import { CurrentResource } from '../../core/rbac/current-resource.decorator';
 import { RequirePermission } from '../../core/rbac/require-permission.decorator';
 import { PostsService } from './posts.service';
 
@@ -15,8 +16,21 @@ export class PostsController {
   }
 
   @Get(':id')
-  @RequirePermission('post:read')
-  findById(@Param('id') id: string): Promise<Post | null> {
-    return this.posts.findById(id);
+  @RequirePermission('post:read', { resource: 'post', param: 'id' })
+  findById(@CurrentResource() post: Post): Post {
+    // O guard já carregou e autorizou: buscar de novo seria uma query a mais.
+    return post;
+  }
+
+  @Patch(':id')
+  @RequirePermission('post:update', { resource: 'post', param: 'id' })
+  update(@Param('id') id: string, @Body() dto: { title?: string; body?: string }): Promise<Post> {
+    return this.posts.update(id, dto);
+  }
+
+  @Delete(':id')
+  @RequirePermission('post:delete', { resource: 'post', param: 'id' })
+  remove(@Param('id') id: string): Promise<Post> {
+    return this.posts.delete(id);
   }
 }
