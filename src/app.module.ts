@@ -12,6 +12,7 @@ import { CryptoModule } from './core/crypto/crypto.module';
 import { DatabaseModule } from './core/database/database.module';
 import { MailModule } from './core/mail/mail.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { PostsModule } from './modules/posts/posts.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -72,6 +73,7 @@ import { UsersModule } from './modules/users/users.module';
     }),
     UsersModule,
     AuthModule,
+    PostsModule,
   ],
   controllers: [HealthController],
   providers: [
