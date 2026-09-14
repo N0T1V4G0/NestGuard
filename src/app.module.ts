@@ -11,6 +11,7 @@ import { ConfigModule } from './core/config/config.module';
 import { CryptoModule } from './core/crypto/crypto.module';
 import { DatabaseModule } from './core/database/database.module';
 import { MailModule } from './core/mail/mail.module';
+import { RbacModule } from './core/rbac/rbac.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { UsersModule } from './modules/users/users.module';
@@ -21,6 +22,7 @@ import { UsersModule } from './modules/users/users.module';
     DatabaseModule,
     CryptoModule,
     MailModule,
+    RbacModule,
     LoggerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService<Env, true>) => ({
