@@ -11,6 +11,7 @@ import { ConfigModule } from './core/config/config.module';
 import { CryptoModule } from './core/crypto/crypto.module';
 import { DatabaseModule } from './core/database/database.module';
 import { MailModule } from './core/mail/mail.module';
+import { PermissionGuard } from './core/rbac/permission.guard';
 import { RbacModule } from './core/rbac/rbac.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PostsModule } from './modules/posts/posts.module';
@@ -27,6 +28,9 @@ import { UsersModule } from './modules/users/users.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService<Env, true>) => ({
         pinoHttp: {
+          // 'silent' desliga o log por completo — usado pela suíte de testes,
+          // onde uma linha JSON por requisição enterraria a saída do Jest.
+          level: process.env.LOG_LEVEL ?? 'info',
           // O request id correlaciona todas as linhas de uma requisição.
           // Respeita o x-request-id do cliente quando existe, para rastrear
           // através de um gateway ou de outro serviço.
@@ -86,6 +90,9 @@ import { UsersModule } from './modules/users/users.module';
     // declarado caso a caso com @Public(). Esquecer o decorator deixa a rota
     // protegida — o erro seguro.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // Depois do JwtAuthGuard: a permissão só faz sentido com o usuário já
+    // resolvido no request.
+    { provide: APP_GUARD, useClass: PermissionGuard },
   ],
 })
 export class AppModule {}
