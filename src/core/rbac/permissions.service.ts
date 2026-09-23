@@ -1,12 +1,33 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { conditionToPrisma } from './condition.to-prisma';
+import { PermissionsCacheService } from './permissions-cache.service';
 import type { Condition, ResolvedPermissions } from './permission.types';
 import { isPermission, type Permission } from './permissions';
 
 @Injectable()
 export class PermissionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: PermissionsCacheService,
+  ) {}
+
+  /**
+   * Conjunto efetivo de permissões, servido do cache quando disponível.
+   *
+   * Com o cache desligado ou o Redis fora do ar, cai direto no banco: o
+   * `get` devolve `null` em vez de propagar o erro.
+   */
+  async resolve(userId: string): Promise<ResolvedPermissions> {
+    const cached = await this.cache.get(userId);
+    if (cached) {
+      return cached;
+    }
+
+    const resolved = await this.resolveFromDatabase(userId);
+    await this.cache.set(userId, resolved);
+    return resolved;
+  }
 
   /**
    * Monta o conjunto efetivo de permissões do usuário: os papéis diretos,
@@ -16,7 +37,7 @@ export class PermissionsService {
    * absorve as condicionais da mesma permissão — restringir depois de já ter
    * concedido irrestritamente não faria sentido.
    */
-  async resolve(userId: string): Promise<ResolvedPermissions> {
+  private async resolveFromDatabase(userId: string): Promise<ResolvedPermissions> {
     const directRoles = await this.prisma.userRole.findMany({
       where: { userId },
       select: { roleId: true },

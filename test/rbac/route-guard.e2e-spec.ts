@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { PrismaService } from '../../src/core/database/prisma.service';
+import { RolesService } from '../../src/core/rbac/roles.service';
 import { createTestApp, resetDatabase } from '../helpers/app';
 import { giveUserRole, resetRbac } from '../helpers/rbac';
 
@@ -94,7 +95,10 @@ describe('PermissionGuard — rota sem recurso', () => {
       .send({ title: 'T', body: 'B' })
       .expect(201);
 
-    await app.get(PrismaService).userRole.deleteMany({ where: { userId } });
+    const vinculos = await app.get(PrismaService).userRole.findMany({ where: { userId } });
+    for (const v of vinculos) {
+      await app.get(RolesService).revoke(userId, v.roleId);
+    }
 
     await request(app.getHttpServer())
       .post('/posts')
