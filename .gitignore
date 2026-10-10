@@ -4,3 +4,8 @@ dist/
 *.log
 coverage/
 *.tsbuildinfo
+
+# ferramental de agente e docs de planejamento (locais, não publicados)
+.agents/
+.claude/
+docs/superpowers/
