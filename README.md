@@ -24,15 +24,22 @@ const posts = await prisma.post.findMany();
 return posts.filter((p) => canRead(user, p)); // ⚠️
 ```
 
-Isso parece funcionar e tem dois defeitos sérios:
+Isso parece funcionar e tem três defeitos sérios:
 
 1. **Quebra paginação.** `take: 20` traz 20 registros do banco; o filtro derruba
    12 e a página devolve 8. A próxima página pula registros.
 2. **Vaza contagem.** Um `count()` conta o que o usuário não pode ver.
+3. **Não escala.** Com um milhão de registros, todos passam pela memória do
+   processo para que quase todos sejam descartados.
 
 A alternativa é fazer a autorização descer para dentro da query. É o que o
 [`scopeFor()`](src/core/rbac/permissions.service.ts) faz: traduz as condições
 das permissões do usuário num fragmento `where` do Prisma.
+
+A dificuldade está aí: as condições são **dados**, não código. Um papel guarda
+"pode ler onde `status = PUBLISHED`" como linha no banco, e isso precisa virar
+um fragmento de query em tempo de execução — somando o que vem de cada papel,
+inclusive os herdados.
 
 ```ts
 @Get()
