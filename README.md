@@ -188,7 +188,9 @@ test/
 
 ## Decisões registradas
 
-Escolhas que custaram mais pensamento que código:
+Escolhas que custaram mais pensamento que código. As decisões estruturais do
+projeto — estrutura de pastas, autenticação, Node, Prisma, imagem de produção —
+estão em [docs/architecture.md](docs/architecture.md).
 
 - **Herança simples, não múltipla.** Herança múltipla vira grafo com detecção
   de ciclo — complexidade real para um caso raro. Mesmo com herança simples o
