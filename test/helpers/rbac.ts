@@ -1,5 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { PrismaService } from '../../src/core/database/prisma.service';
+import { PermissionsCacheService } from '../../src/core/rbac/permissions-cache.service';
+import { RolesService } from '../../src/core/rbac/roles.service';
 
 /**
  * Cria um papel com as concessões dadas e vincula ao usuário.
@@ -27,7 +29,9 @@ export async function giveUserRole(
     },
   });
 
-  await prisma.userRole.create({ data: { userId, roleId: role.id } });
+  // Pelo RolesService, não pelo Prisma: é ele que invalida o cache. Escrever
+  // direto deixaria a suíte medindo permissões obsoletas.
+  await app.get(RolesService).assign(userId, role.id);
   return role.id;
 }
 
@@ -45,4 +49,8 @@ export async function resetRbac(app: INestApplication): Promise<void> {
   await prisma.post.deleteMany();
   await prisma.roleGrant.deleteMany({ where: { role: { isSystem: false } } });
   await prisma.role.deleteMany({ where: { isSystem: false } });
+
+  // A limpeza mexe em papéis por baixo do RolesService, então o cache precisa
+  // cair junto — senão a suíte seguinte herda permissões do cenário anterior.
+  await app.get(PermissionsCacheService).invalidateAll();
 }
