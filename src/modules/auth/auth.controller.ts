@@ -10,6 +10,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { User } from '@prisma/client';
 import type { Request, Response } from 'express';
@@ -28,6 +29,7 @@ const REFRESH_COOKIE = 'refresh_token';
 /** Restringe o envio do cookie às rotas de auth, não a toda requisição. */
 const REFRESH_COOKIE_PATH = '/auth';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -60,6 +62,10 @@ export class AuthController {
     return raw;
   }
 
+  @ApiOperation({ summary: 'Cria uma conta e dispara o e-mail de verificação' })
+  @ApiResponse({ status: 201, description: 'Conta criada' })
+  @ApiResponse({ status: 409, description: 'E-mail já cadastrado' })
+  @ApiResponse({ status: 429, description: 'Limite de tentativas excedido' })
   @Public()
   @SkipThrottle({ default: true })
   @Post('register')
@@ -68,6 +74,10 @@ export class AuthController {
     return this.auth.register(dto);
   }
 
+  @ApiOperation({ summary: 'Autentica e devolve o access token' })
+  @ApiResponse({ status: 200, description: 'Autenticado; refresh token vai no cookie httpOnly' })
+  @ApiResponse({ status: 401, description: 'Credenciais inválidas' })
+  @ApiResponse({ status: 429, description: 'Limite de tentativas excedido' })
   @Public()
   @SkipThrottle({ default: true })
   @Post('login')
@@ -83,6 +93,10 @@ export class AuthController {
     return { accessToken };
   }
 
+  @ApiCookieAuth('refresh_token')
+  @ApiOperation({ summary: 'Troca o refresh token do cookie por um novo access token' })
+  @ApiResponse({ status: 200, description: 'Renovado; o refresh token é rotacionado' })
+  @ApiResponse({ status: 401, description: 'Refresh token ausente, inválido ou já usado' })
   @Public()
   @SkipThrottle({ sensitive: true })
   @Post('refresh')
@@ -97,6 +111,9 @@ export class AuthController {
     return { accessToken };
   }
 
+  @ApiCookieAuth('refresh_token')
+  @ApiOperation({ summary: 'Encerra a sessão e limpa o cookie' })
+  @ApiResponse({ status: 204, description: 'Encerrada; idempotente, mesmo sem cookie' })
   @Public()
   @SkipThrottle({ sensitive: true })
   @Post('logout')
@@ -112,6 +129,9 @@ export class AuthController {
     res.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH });
   }
 
+  @ApiOperation({ summary: 'Confirma o e-mail a partir do token enviado' })
+  @ApiResponse({ status: 204, description: 'E-mail verificado' })
+  @ApiResponse({ status: 400, description: 'Token inválido ou expirado' })
   @Public()
   @SkipThrottle({ sensitive: true })
   @Post('verify-email')
@@ -120,6 +140,14 @@ export class AuthController {
     return this.auth.verifyEmail(dto.token);
   }
 
+  @ApiOperation({
+    summary: 'Solicita a redefinição de senha',
+    description:
+      'Responde 204 mesmo para e-mail inexistente: informar o contrário permitiria ' +
+      'descobrir quais endereços têm conta.',
+  })
+  @ApiResponse({ status: 204, description: 'Se a conta existir, o e-mail foi enviado' })
+  @ApiResponse({ status: 429, description: 'Limite de tentativas excedido' })
   @Public()
   @SkipThrottle({ default: true })
   @Post('request-password-reset')
@@ -128,6 +156,9 @@ export class AuthController {
     return this.auth.requestPasswordReset(dto.email);
   }
 
+  @ApiOperation({ summary: 'Redefine a senha a partir do token' })
+  @ApiResponse({ status: 204, description: 'Senha redefinida' })
+  @ApiResponse({ status: 400, description: 'Token inválido ou expirado' })
   @Public()
   @SkipThrottle({ default: true })
   @Post('reset-password')
@@ -136,6 +167,10 @@ export class AuthController {
     return this.auth.resetPassword(dto.token, dto.password);
   }
 
+  @ApiBearerAuth('bearer')
+  @ApiOperation({ summary: 'Devolve o usuário autenticado' })
+  @ApiResponse({ status: 200, description: 'O usuário do token' })
+  @ApiResponse({ status: 401, description: 'Token ausente ou inválido' })
   @SkipThrottle({ sensitive: true })
   @Get('me')
   me(@CurrentUser() user: User): { id: string; email: string; name: string | null } {
