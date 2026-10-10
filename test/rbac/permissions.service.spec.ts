@@ -1,5 +1,8 @@
 import 'dotenv/config';
+import { ConfigService } from '@nestjs/config';
+import type { Env } from '../../src/core/config/env.schema';
 import { PrismaService } from '../../src/core/database/prisma.service';
+import { PermissionsCacheService } from '../../src/core/rbac/permissions-cache.service';
 import { PermissionsService } from '../../src/core/rbac/permissions.service';
 
 describe('PermissionsService.resolve', () => {
@@ -10,7 +13,13 @@ describe('PermissionsService.resolve', () => {
   beforeAll(async () => {
     prisma = new PrismaService();
     await prisma.onModuleInit();
-    service = new PermissionsService(prisma);
+    // Cache desligado de propósito: esta suíte mede a resolução contra o
+    // banco. Com ele ligado, estaria medindo o Redis.
+    const cache = new PermissionsCacheService(
+      new ConfigService({ RBAC_CACHE_ENABLED: false }) as unknown as ConfigService<Env, true>,
+    );
+    cache.onModuleInit();
+    service = new PermissionsService(prisma, cache);
   });
 
   beforeEach(async () => {
