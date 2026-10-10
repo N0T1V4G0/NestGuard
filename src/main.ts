@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
+import { setupSwagger } from './core/common/swagger';
 import type { Env } from './core/config/env.schema';
 
 async function bootstrap(): Promise<void> {
@@ -15,6 +16,7 @@ async function bootstrap(): Promise<void> {
   app.useLogger(app.get(Logger));
   app.use(cookieParser());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  setupSwagger(app);
 
   const config = app.get(ConfigService<Env, true>);
   await app.listen(config.get('PORT', { infer: true }));

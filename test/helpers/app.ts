@@ -13,8 +13,15 @@ import { PrismaService } from '../../src/core/database/prisma.service';
  * ConfigService em vez de mexer em `process.env`: o @nestjs/config lê o
  * ambiente uma única vez, no primeiro carregamento do módulo, e alterações
  * posteriores em process.env não têm efeito.
+ *
+ * `beforeInit` roda com a app montada e ainda não inicializada. Existe para o
+ * Swagger: `SwaggerModule.setup()` registra rotas, e registrar rota depois do
+ * `init()` não tem efeito — as rotas dariam 404.
  */
-export async function createTestApp(env: Record<string, string> = {}): Promise<INestApplication> {
+export async function createTestApp(
+  env: Record<string, string> = {},
+  beforeInit?: (app: INestApplication) => void,
+): Promise<INestApplication> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
   const app = moduleRef.createNestApplication();
 
@@ -29,6 +36,8 @@ export async function createTestApp(env: Record<string, string> = {}): Promise<I
   // falhariam por motivo diferente do código de produção.
   app.use(cookieParser());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
+  beforeInit?.(app);
 
   await app.init();
   return app;

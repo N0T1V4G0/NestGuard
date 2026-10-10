@@ -13,6 +13,17 @@ export const EnvSchema = z.object({
   THROTTLE_TTL_MS: z.coerce.number().int().positive().default(60_000),
   THROTTLE_LIMIT_DEFAULT: z.coerce.number().int().positive().default(100),
   THROTTLE_LIMIT_SENSITIVE: z.coerce.number().int().positive().default(5),
+  // Cache de permissões. Desligável: nem todo projeto tem Redis, e a
+  // resolução funciona sem ele.
+  //
+  // Não usar `z.coerce.boolean()`: ele aplica `Boolean(valor)`, e toda string
+  // não-vazia vira `true` — `RBAC_CACHE_ENABLED=false` no .env ligaria o
+  // cache. Aqui o literal é comparado explicitamente.
+  RBAC_CACHE_ENABLED: z
+    .union([z.boolean(), z.enum(['true', 'false'])])
+    .default(true)
+    .transform((v) => v === true || v === 'true'),
+  RBAC_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(300),
   MAIL_FROM: z.email(),
   MAIL_HOST: z.string().min(1),
   MAIL_PORT: z.coerce.number().int().positive(),
