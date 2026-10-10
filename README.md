@@ -2,6 +2,10 @@
 
 [![CI](https://github.com/N0T1V4G0/NestGuard/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/N0T1V4G0/NestGuard/actions/workflows/ci.yml)
 
+Sistema de controle de acesso para APIs: define quem pode ver e editar cada
+registro, com permissões por papel e por dono. Projeto autoral — 154 testes
+automatizados, CI e documentação OpenAPI.
+
 Autorização RBAC granular para NestJS: catálogo de permissões type-safe
 (permissão inexistente falha no build), ownership, condições declarativas por
 recurso — e autorização que funciona em **listagens**, não só em recurso único.
